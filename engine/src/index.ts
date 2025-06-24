@@ -6,6 +6,7 @@ async function main() {
     const engine = new Engine(); 
     const redisClient = createClient();
     await redisClient.connect();
+    console.log("Engine is processing now : ")
     console.log("connected to redis");
 
     while (true) {
