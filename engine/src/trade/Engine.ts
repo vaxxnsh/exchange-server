@@ -17,6 +17,30 @@ export class Engine {
     private orderbooks: Orderbook[] = [];
     private balances: Map<string, UserBalance> = new Map();
 
+    constructor() {
+        let snapshot = null
+        try {
+            if (process.env.WITH_SNAPSHOT as string) {
+                snapshot = fs.readFileSync("./snapshot.json");
+            }
+        } catch (e) {
+            console.log("No snapshot found");
+        }
+
+        if (snapshot) {
+            const snapshotSnapshot = JSON.parse(snapshot.toString());
+            this.orderbooks = snapshotSnapshot.orderbooks.map((o: any) => new Orderbook(o.baseAsset, o.bids, o.asks, o.lastTradeId, o.currentPrice));
+            this.balances = new Map(snapshotSnapshot.balances);
+        } else {
+            this.orderbooks = [new Orderbook(`TATA`, [], [], 0, 0)];
+            this.setBaseBalances();
+        }
+        setInterval(() => {
+            this.saveSnapshot();
+        }, 1000 * 3);
+    }
+
+
     process({ message, clientId }: {message: MessageFromApi, clientId: string}) {
         switch (message.type) {
             case CREATE_ORDER:
@@ -360,6 +384,41 @@ export class Engine {
         } else {
             userBalance[BASE_CURRENCY].available += amount;
         }
+    }
+
+    setBaseBalances() {
+        this.balances.set("1", {
+            [BASE_CURRENCY]: {
+                available: 10000000,
+                locked: 0
+            },
+            "TATA": {
+                available: 10000000,
+                locked: 0
+            }
+        });
+
+        this.balances.set("2", {
+            [BASE_CURRENCY]: {
+                available: 10000000,
+                locked: 0
+            },
+            "TATA": {
+                available: 10000000,
+                locked: 0
+            }
+        });
+
+        this.balances.set("5", {
+            [BASE_CURRENCY]: {
+                available: 10000000,
+                locked: 0
+            },
+            "TATA": {
+                available: 10000000,
+                locked: 0
+            }
+        });
     }
 
     saveSnapshot() {

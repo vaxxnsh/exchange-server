@@ -1,25 +1,31 @@
-import { Client } from 'pg'; 
+import { Client } from 'pg';
 
 const client = new Client({
-    user: 'your_user',
-    host: 'localhost',
-    database: 'my_database',
-    password: 'your_password',
-    port: 5432,
+  user: 'your_user',
+  host: 'localhost',
+  database: 'my_database',
+  password: 'your_password',
+  port: 5432,
 });
-client.connect();
 
 async function refreshViews() {
-
-    await client.query('REFRESH MATERIALIZED VIEW klines_1m');
-    await client.query('REFRESH MATERIALIZED VIEW klines_1h');
-    await client.query('REFRESH MATERIALIZED VIEW klines_1w');
-
-    console.log("Materialized views refreshed successfully");
+  await client.query('REFRESH MATERIALIZED VIEW klines_1m');
+  await client.query('REFRESH MATERIALIZED VIEW klines_1h');
+  await client.query('REFRESH MATERIALIZED VIEW klines_1w');
+  console.log("🔁 Refreshed at", new Date().toISOString());
 }
 
-refreshViews().catch(console.error);
+export async function startCronJob() {
+  await client.connect();
+  console.log("✅ Connected to PostgreSQL for cron job");
 
-setInterval(() => {
-    refreshViews()
-}, 1000 * 10 );
+  await refreshViews();
+
+  setInterval(async () => {
+    try {
+      await refreshViews();
+    } catch (err) {
+      console.error("❌ Error refreshing views:", err);
+    }
+  }, 10000);
+}

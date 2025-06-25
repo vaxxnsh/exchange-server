@@ -11,16 +11,19 @@ const client = new Client({
 async function initializeDB() {
     await client.connect();
 
+    await client.query(`DROP TABLE IF EXISTS tata_prices CASCADE;`);
+
     await client.query(`
-        DROP TABLE IF EXISTS "tata_prices";
-        CREATE TABLE "tata_prices"(
-            time            TIMESTAMP WITH TIME ZONE NOT NULL,
-            price   DOUBLE PRECISION,
-            volume      DOUBLE PRECISION,
-            currency_code   VARCHAR (10)
+        CREATE TABLE tata_prices (
+            time            TIMESTAMPTZ NOT NULL,
+            price           DOUBLE PRECISION,
+            volume          DOUBLE PRECISION,
+            currency_code   VARCHAR(10)
         );
-        
-        SELECT create_hypertable('tata_prices', 'time', 'price', 2);
+    `);
+
+    await client.query(`
+        SELECT create_hypertable('tata_prices', 'time', if_not_exists => TRUE);
     `);
 
     await client.query(`
@@ -66,7 +69,7 @@ async function initializeDB() {
     `);
 
     await client.end();
-    console.log("Database initialized successfully");
+    console.log("✅ Database initialized successfully");
 }
 
 initializeDB().catch(console.error);
