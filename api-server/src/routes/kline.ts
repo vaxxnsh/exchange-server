@@ -14,40 +14,58 @@ pgClient.connect();
 
 export const klineRouter = Router();
 
-klineRouter.get("/",async (req, res) : Promise<any> => {
+klineRouter.get("/", async (req, res): Promise<any> => {
     const { market, interval, startTime, endTime } = req.query;
 
+    if (!market || !interval || !startTime || !endTime) {
+        return res.status(400).send("Missing required query parameters");
+    }
+
     let query;
+    let values;
+
     switch (interval) {
         case '1m':
-            query = `SELECT * FROM klines_1m WHERE bucket >= $1 AND bucket <= $2`;
+            query = `SELECT * FROM klines_1m WHERE bucket >= $1 AND bucket <= $2 AND currency_code = $3`;
             break;
         case '1h':
-            query = `SELECT * FROM klines_1m WHERE  bucket >= $1 AND bucket <= $2`;
+            query = `SELECT * FROM klines_1h WHERE bucket >= $1 AND bucket <= $2 AND currency_code = $3`;
             break;
         case '1w':
-            query = `SELECT * FROM klines_1w WHERE bucket >= $1 AND bucket <= $2`;
+            query = `SELECT * FROM klines_1w WHERE bucket >= $1 AND bucket <= $2 AND currency_code = $3`;
             break;
         default:
             return res.status(400).send('Invalid interval');
     }
 
     try {
-        //@ts-ignore
-        const result = await pgClient.query(query, [new Date(startTime * 1000 as string), new Date(endTime * 1000 as string)]);
+        const start = new Date(Number(startTime));
+        const end = new Date(Number(endTime));
+        values = [start, end, market];
+
+        const result = await pgClient.query(query, values);
         res.json(result.rows.map(x => ({
-            close: x.close,
-            end: x.bucket,
+            open: x.open,
             high: x.high,
             low: x.low,
-            open: x.open,
-            quoteVolume: x.quoteVolume,
-            start: x.start,
-            trades: x.trades,
+            close: x.close,
             volume: x.volume,
+            start: x.bucket,
+            end: new Date(new Date(x.bucket).getTime() + getIntervalMs(interval)),
+            currency: x.currency_code,
         })));
     } catch (err) {
-        console.log(err);
+        console.error("Error querying klines:", err);
         res.status(500).send(err);
     }
 });
+
+
+function getIntervalMs(interval: string): number {
+    switch (interval) {
+        case '1m': return 60 * 1000;
+        case '1h': return 60 * 60 * 1000;
+        case '1w': return 7 * 24 * 60 * 60 * 1000;
+        default: return 0;
+    }
+}
